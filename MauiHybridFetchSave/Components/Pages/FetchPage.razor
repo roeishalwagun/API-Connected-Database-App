@@ -1,0 +1,59 @@
+﻿@namespace MauiHybridFetchSave.Pages
+@page "/fetch"
+@inject MauiHybridFetchSave.Services.IApiService ApiService
+@inject MauiHybridFetchSave.Services.IRepository Repository
+
+<h3>Fetch & Save Data</h3>
+<button @onclick="FetchAndSaveAsync" disabled="@isBusy">Fetch and Save Data</button>
+
+@if (isBusy)
+{
+    <p>Loading...</p>
+}
+
+@if (posts?.Count > 0)
+{
+    <h4>Saved Posts (from local DB)</h4>
+    <ul>
+        @foreach (var p in posts)
+        {
+            <li>
+                <strong>@p.Title</strong><br />
+                @p.Body
+                <br /><small>Id: @p.Id, UserId: @p.UserId</small>
+            </li>
+        }
+    </ul>
+}
+else if (!isBusy)
+{
+    <p>No data yet.</p>
+}
+
+@code {
+    private bool isBusy = false;
+    private List<MauiHybridFetchSave.Models.Post> posts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Repository.InitAsync();
+        posts = await Repository.GetAllAsync();
+    }
+
+    private async Task FetchAndSaveAsync()
+    {
+        isBusy = true;
+        try
+        {
+            var fetched = await ApiService.FetchPostsAsync();
+            await Repository.InsertAllAsync(fetched);
+            posts = await Repository.GetAllAsync();
+        }
+        finally
+        {
+            isBusy = false;
+            StateHasChanged();
+        }
+    }
+}
+
